@@ -6,6 +6,8 @@ Ansible Playbook to prepare your Ansible hosts with SSH connectivity by performi
 3. Add host keys to your `known_hosts` file on your localhost
 4. Copy user SSH public key to the `authorized_keys` file on your hosts (using ssh-copy-id)
 
+The `dig` command is used in the Playbook to retrieve the IP address from the FQDN. This allows us to save the key into the `known_hosts` using both the FDQN and IP address. This is useful so you can use either the IP or FQDN to ssh to the host.
+
 ## Example
 Run the playbook with the following command so that Ansible prompts you for the user password. This will be used when copying the SSH public key for the user to the host. You need to do this so that you prevent future requests for password.
 ```
