@@ -9,7 +9,7 @@ Ansible Playbook to prepare your Ansible hosts with SSH connectivity by performi
 The `dig` command is used in the Playbook to retrieve the IP address from the FQDN. This allows us to save the key into the `known_hosts` using both the FDQN and IP address. This is useful so you can use either the IP or FQDN to ssh to the host.
 
 ## Example
-Run the playbook with the following command so that Ansible prompts you for the user password. This will be used when copying the SSH public key for the user to the host. You need to do this so that you prevent future requests for password.
+Run the playbook with the following command so that Ansible prompts you for the user password (using `--ask-pass` argument). This will be used when copying the SSH public key for the user to the host. You need to do this so that you prevent future requests for password.
 ```
 ansible-playbook -i inventory --ask-pass ssh-prepare.yml
 ```
