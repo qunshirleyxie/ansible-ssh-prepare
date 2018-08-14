@@ -2,15 +2,22 @@
 - name: Store known hosts of 'all' the hosts in the inventory file
   hosts: localhost
   connection: local
+  gather_facts: true
+
   vars:
+
     ssh_known_hosts_key_type_param: "-t ecdsa-sha2-nistp256" # leave empty if you want all key types
     ssh_known_hosts_command: "ssh-keyscan -T 10 {{ ssh_known_hosts_key_type_param }}"
     ssh_known_hosts_file: "{{ lookup('env','HOME') + '/.ssh/known_hosts' }}"
     ssh_known_hosts: "{{ groups['all'] }}" # all inventory hosts
-    
+    ssh_disable_password_auth: false # optionally disable password authentication for tighter security
+    ssh_disable_root_login: false # optionally disable root login for tighter security
+    ssh_keygen: false # optionally generate the user key
+    ssh_keygen_file: '~/.ssh/id_rsa' # default location for user ssh key pair
 
   tasks:
-  - name: For each host, scan for its ssh public key
+
+  - name: Get all public host keys
     shell: "{{ ssh_known_hosts_command }} {{ item }},`dig +short {{ item }}`"
     with_items: "{{ ssh_known_hosts }}"
     register: ssh_known_host_results
@@ -18,7 +25,7 @@
     tags:
       - ssh
 
-  - name: Remove the public key in the '{{ ssh_known_hosts_file }}'
+  - name: Remove the public host keys in the '{{ ssh_known_hosts_file }}'
     known_hosts:
       name: "{{ item.item }}"
       state: "absent"
@@ -27,7 +34,7 @@
     tags:
       - ssh
 
-  - name: Add/update the public key in the '{{ ssh_known_hosts_file }}'
+  - name: Add/update the public host key in the '{{ ssh_known_hosts_file }}'
     known_hosts:
       name: "{{ item.item }}"
       key: "{{ item.stdout }}"
@@ -37,10 +44,54 @@
     tags:
       - ssh
 
-  - name: For each host, ssh-copy-id my ssh public keys to the host
+  - name: Optionally generate user SSH key pair
+    shell: "ssh-keygen -b 2048 -t rsa -f {{ ssh_keygen_file }} -q -N ''"
+    args:
+      creates: "{{ ssh_keygen_file }}"
+    when: ssh_keygen
+
+  - name: Verify user public key exists
+    stat:
+      path: "{{ ssh_keygen_file }}"
+    register: key_results
+
+  - name: Fail when user keys are not generated
+    fail:
+      msg: "User SSH keys are not generated. Set 'ssh_keygen: true' to have playbook generate the keys."
+    when: not key_results.exists
+
+  - name: Copy the user SSH public key to all of the hosts
     shell: "sshpass -p '{{ ansible_ssh_pass }}' ssh-copy-id {{ item }}"
     with_items: "{{ ssh_known_hosts }}"
     when: not (( ansible_ssh_pass is undefined ) or ( ansible_ssh_pass is none ) or ( ansible_ssh_pass | trim == ''))
     tags:
       - sshcopy
 
+  - name: Optionally disable SSH password authentication for tighter security
+    lineinfile:
+        path: /etc/ssh/sshd_config # required. The file to modify.,Before 2.3 this option was only usable as I(dest), I(destfile) and I(name).
+        regexp: 'PasswordAuthentication' # not required. The regular expression to look for in every line of the file. For C(state=present), the pattern to replace if found. Only the last line found will be replaced. For C(state=absent), the pattern of the line(s) to remove. Uses Python regular expressions. See U(http://docs.python.org/2/library/re.html).
+        line: 'PasswordAuthentication no' # not required. Required for C(state=present). The line to insert/replace into the file. If C(backrefs) is set, may contain backreferences that will get expanded with the C(regexp) capture groups if the regexp matches.
+        state: present
+    when: ssh_disable_password_auth
+    notify: restart ssh
+    tags:
+      - sshdisablepswd
+
+  - name: Optionally disable SSH root login for tighter security
+    lineinfile:
+        path: /etc/ssh/sshd_config # required. The file to modify.,Before 2.3 this option was only usable as I(dest), I(destfile) and I(name).
+        regexp: 'PermitRootLogin' # not required. The regular expression to look for in every line of the file. For C(state=present), the pattern to replace if found. Only the last line found will be replaced. For C(state=absent), the pattern of the line(s) to remove. Uses Python regular expressions. See U(http://docs.python.org/2/library/re.html).
+        line: 'PermitRootLogin no' # not required. Required for C(state=present). The line to insert/replace into the file. If C(backrefs) is set, may contain backreferences that will get expanded with the C(regexp) capture groups if the regexp matches.
+        state: present
+    when: ssh_disable_root_login
+    notify: restart ssh
+    tags:
+      - sshdisableroot
+
+  handlers:
+
+  - name: restart ssh
+    service:
+      name: sshd
+      state: restarted
