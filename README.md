@@ -12,25 +12,27 @@ Steps:
 1. Get the host key for all hosts (using `ssh-keyscan`)
 2. Remove any entries in `known_hosts` for the specific hosts. This guarantees a clean `known_hosts`. It only removes entries related to the hosts in your `inventory` file.
 3. Add host keys to your `known_hosts` file on your localhost
-4. Copy user SSH public key to the `authorized_keys` file on your hosts (using ssh-copy-id)
+4. Copy user SSH public key to the `authorized_keys` file on your hosts (using `ssh-copy-id`)
 
 The `dig` command is used in the Playbook to retrieve the IP address from the FQDN. This allows us to save the key into the `known_hosts` using both the FDQN and IP address. This is useful so you can use either the IP or FQDN to ssh to the host.
 
 ## Example
-Run the playbook with the following command. Use the `--ask-pass` argument to have Ansible prompt you for the password, which will be used when copying the SSH public key for the user to the host. You need to do this so that you prevent future requests for password.
+Run the playbook using the following syntax. It will prompt you for the SSH password, which will be used when copying the SSH public key for the user to the host. The password is required for the initial authentication method. Afterwards, when the public key is copied to the target host, then passwords will no longer be necessary.
 ```
-ansible-playbook -i inventory --ask-pass ssh-prepare.yml
+ansible-playbook -i inventory ssh-prepare.yml
 ```
 
-## References
-I found the original idea at [Stackoverflow](http://stackoverflow.com/a/39083724), but I have done many improvements and adjustments.
+## Troubleshooting
 
-Wonderful overview on [host keys](https://www.ssh.com/ssh/host-key).
+There are a number of reasons why the `ssh-copy-id` command might fail:
 
-Additional recommended reading on SSH can be found here: 
-[ssh essentials - working with ssh servers clients and keys](https://www.digitalocean.com/community/tutorials/ssh-essentials-working-with-ssh-servers-clients-and-keys).
+* The server might not be configured to accept public key authentication. Make sure `/etc/ssh/sshd_config` on the server contains `PubkeyAuthentication yes`. Remember to restart the `sshd` process on the server.
+* If trying to login as root, the server might not be configured to allow root logins. Make sure `/etc/sshd_config` includes `PermitRootLogin yes`, `PermitRootLogin prohibit-password`, or `without-password`. If it is set to forced-commands-only, the key must be manually configured to use a forced command (see `command=` option in `~/.ssh/authorized_keys`).
+* Make sure the client allows public key authentication. Check that `/etc/ssh/config` includes `PubkeyAuthentication yes`.
+* Try adding `-v` option to the ssh command used for the test. Read the output to see what it says about whether the key is tried and what authentication methods the server is willing to accept.
+* OpenSSH only allows a maximum of five keys to be tried authomatically. If you have more keys, you must specify which key to use using the `-i` option to ssh.
 
-## SSH Tips and Tricks
+
 **disconnect**
 To disconnect from a hanging SSH connection use the following key-command: `~.`
 
@@ -60,3 +62,12 @@ Here are the list of log levels:
 - DEBUG1
 - DEBUG2
 - DEBUG3
+
+
+## References
+I found the original idea at [Stackoverflow](http://stackoverflow.com/a/39083724), but I have done many improvements and adjustments.
+
+Wonderful overview on [host keys](https://www.ssh.com/ssh/host-key).
+
+Additional recommended reading on SSH can be found here: 
+[ssh essentials - working with ssh servers clients and keys](https://www.digitalocean.com/community/tutorials/ssh-essentials-working-with-ssh-servers-clients-and-keys).

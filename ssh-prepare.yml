@@ -15,6 +15,12 @@
     ssh_keygen: false # optionally generate the user key
     ssh_keygen_file: '~/.ssh/id_rsa' # default location for user ssh key pair
 
+  vars_prompt:
+    - name: "ansible_ssh_pass"
+      prompt: "SSH Password for user {{ ansible_ssh_user }}?"
+      private: yes
+      when: (( ansible_ssh_pass is undefined ) or ( ansible_ssh_pass is none ) or ( ansible_ssh_pass | trim == ''))
+
   tasks:
 
   - name: Get all public host keys
@@ -63,7 +69,6 @@
   - name: Copy the user SSH public key to all of the hosts
     shell: "sshpass -p '{{ ansible_ssh_pass }}' ssh-copy-id {{ item }}"
     with_items: "{{ ssh_known_hosts }}"
-    when: not (( ansible_ssh_pass is undefined ) or ( ansible_ssh_pass is none ) or ( ansible_ssh_pass | trim == ''))
     tags:
       - sshcopy
 
