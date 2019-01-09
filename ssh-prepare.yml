@@ -61,9 +61,9 @@
       path: "{{ ssh_keygen_file }}"
     register: key_results
 
-  - name: Fail when user keys are not generated
+  - name: Fail when user keys do not exist
     fail:
-      msg: "User SSH keys are not generated. Set 'ssh_keygen: true' to have playbook generate the keys."
+      msg: "User SSH keys do not exist. Set 'ssh_keygen: true' to have playbook generate the keys."
     when: not key_results.exists
 
   - name: Copy the user SSH public key to all of the hosts
