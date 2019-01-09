@@ -18,8 +18,15 @@ The `dig` command is used in the Playbook to retrieve the IP address from the FQ
 
 ## Example
 Run the playbook using the following syntax. It will prompt you for the SSH password, which will be used when copying the SSH public key for the user to the host. The password is required for the initial authentication method. Afterwards, when the public key is copied to the target host, then passwords will no longer be necessary.
-```
+
+```bash
 ansible-playbook -i inventory ssh-prepare.yml
+```
+
+If you need to use a custom public key then override the `ssh_public_key` variable as follows:
+
+```bash
+ansible-playbook -i inventory ssh-prepare.yml -e ssh_public_key='~/.ssh/customkey.pub'
 ```
 
 ## Troubleshooting
