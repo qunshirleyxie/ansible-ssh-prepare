@@ -65,7 +65,7 @@
   - name: user key - Fail when user keys do not exist
     fail:
       msg: "User SSH keys do not exist. Set 'ssh_keygen_enable: true' to have playbook generate the keys."
-    when: not key_results.exists
+    when: not key_results.stat.exists
 
   - name: user key - Copy the user SSH public key to all of the hosts
     shell: "sshpass -p '{{ ssh_password }}' ssh-copy-id -i {{ ssh_public_key }} {{ ssh_user }}@{{ item }}"
