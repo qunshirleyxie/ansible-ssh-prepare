@@ -12,12 +12,12 @@ Steps:
 1. Get the host key for all hosts (using `ssh-keyscan`)
 2. Remove any entries in `known_hosts` for the specific hosts. This guarantees a clean `known_hosts`. It only removes entries related to the hosts in your `inventory` file.
 3. Add host keys to your `known_hosts` file on your localhost
-4. Copy user SSH public key to the `authorized_keys` file on your hosts (using `ssh-copy-id`)
+4. Connect to each host using `ssh_user` and `ssh_password` and copy the public key `ssh_public_key` to the `authorized_keys` file on your hosts (using `ssh-copy-id`)
 
 The `dig` command is used in the Playbook to retrieve the IP address from the FQDN. This allows us to save the key into the `known_hosts` using both the FDQN and IP address. This is useful so you can use either the IP or FQDN to ssh to the host.
 
 ## Example
-Run the playbook using the following syntax. It will prompt you for the SSH password, which will be used when copying the SSH public key for the user to the host. The password is required for the initial authentication method. Afterwards, when the public key is copied to the target host, then passwords will no longer be necessary.
+Run the playbook using the following syntax. It will prompt you for the `ssh_user` and `ssh_password` that will be used to establish authentication to the hosts in order to copy the SSH public key to the host. The password is required for the initial authentication method. Afterwards, when the public key is copied to the target host, then password authentication will no longer be necessary.
 
 ```bash
 ansible-playbook -i inventory ssh-prepare.yml

@@ -14,19 +14,19 @@
     ssh_known_hosts_file: "{{ lookup('env','HOME') + '/.ssh/known_hosts' }}"
     ssh_known_hosts: "{{ groups['all'] }}" # all inventory hosts
 
-    # optional - add security after configuring key authentication
-    # ssh_disable_password_auth: false # optionally disable password authentication for tighter security
-    # ssh_disable_root_login: false # optionally disable root login for tighter security
-
     # optional - generate a key (if you have not generated one yet)
     ssh_keygen_enable: false
     ssh_private_key: '~/.ssh/id_rsa'
 
   vars_prompt:
-    - name: "ansible_ssh_pass"
-      prompt: "SSH Password for user {{ ansible_ssh_user }}?"
+    - name: "ssh_user"
+      prompt: "SSH user that will be used to connect to hosts?"
+      when: (( ssh_user is undefined ) or ( ssh_user is none ) or ( ssh_user | trim == ''))
+
+    - name: "ssh_password"
+      prompt: "SSH password for user owning the public key?"
       private: yes
-      when: (( ansible_ssh_pass is undefined ) or ( ansible_ssh_pass is none ) or ( ansible_ssh_pass | trim == ''))
+      when: (( ssh_password is undefined ) or ( ssh_password is none ) or ( ssh_password | trim == ''))
 
   tasks:
 
@@ -59,7 +59,7 @@
 
   - name: user key - Verify user public key exists
     stat:
-      path: "{{ ssh_private_key }}"
+      path: "{{ ssh_public_key }}"
     register: key_results
 
   - name: user key - Fail when user keys do not exist
@@ -68,34 +68,6 @@
     when: not key_results.exists
 
   - name: user key - Copy the user SSH public key to all of the hosts
-    shell: "sshpass -p '{{ ansible_ssh_pass }}' ssh-copy-id -i {{ ssh_public_key }} {{ item }}"
+    shell: "sshpass -p '{{ ssh_password }}' ssh-copy-id -i {{ ssh_public_key }} {{ ssh_user }}@{{ item }}"
     with_items: "{{ ssh_known_hosts }}"
 
-  # - name: Optionally disable SSH password authentication for tighter security
-  #   lineinfile:
-  #       path: /etc/ssh/sshd_config # required. The file to modify.,Before 2.3 this option was only usable as I(dest), I(destfile) and I(name).
-  #       regexp: 'PasswordAuthentication' # not required. The regular expression to look for in every line of the file. For C(state=present), the pattern to replace if found. Only the last line found will be replaced. For C(state=absent), the pattern of the line(s) to remove. Uses Python regular expressions. See U(http://docs.python.org/2/library/re.html).
-  #       line: 'PasswordAuthentication no' # not required. Required for C(state=present). The line to insert/replace into the file. If C(backrefs) is set, may contain backreferences that will get expanded with the C(regexp) capture groups if the regexp matches.
-  #       state: present
-  #   when: ssh_disable_password_auth
-  #   notify: restart ssh
-  #   tags:
-  #     - sshdisablepswd
-
-  # - name: Optionally disable SSH root login for tighter security
-  #   lineinfile:
-  #       path: /etc/ssh/sshd_config # required. The file to modify.,Before 2.3 this option was only usable as I(dest), I(destfile) and I(name).
-  #       regexp: 'PermitRootLogin' # not required. The regular expression to look for in every line of the file. For C(state=present), the pattern to replace if found. Only the last line found will be replaced. For C(state=absent), the pattern of the line(s) to remove. Uses Python regular expressions. See U(http://docs.python.org/2/library/re.html).
-  #       line: 'PermitRootLogin no' # not required. Required for C(state=present). The line to insert/replace into the file. If C(backrefs) is set, may contain backreferences that will get expanded with the C(regexp) capture groups if the regexp matches.
-  #       state: present
-  #   when: ssh_disable_root_login
-  #   notify: restart ssh
-  #   tags:
-  #     - sshdisableroot
-
-  # handlers:
-
-  # - name: restart ssh
-  #   service:
-  #     name: sshd
-  #     state: restarted
