@@ -5,6 +5,9 @@
   gather_facts: true
 
   vars:
+    # default public key pushed to targets - override if necessary
+    ssh_public_key: '~/.ssh/id_rsa.pub'
+
     # defaults - most likely not necessary to change these values
     ssh_known_hosts_key_type_param: "-t ecdsa-sha2-nistp256" # leave empty if you want all key types
     ssh_known_hosts_command: "ssh-keyscan -T 10 {{ ssh_known_hosts_key_type_param }}"
@@ -17,7 +20,7 @@
 
     # optional - generate a key (if you have not generated one yet)
     ssh_keygen_enable: false
-    ssh_keygen_file: '~/.ssh/id_rsa' # default filename and location for the generated user ssh key pair
+    ssh_private_key: '~/.ssh/id_rsa'
 
   vars_prompt:
     - name: "ansible_ssh_pass"
@@ -49,14 +52,14 @@
     with_items: "{{ ssh_known_host_results.results }}"
 
   - name: user key - Optionally generate user SSH key pair
-    shell: "ssh-keygen -b 2048 -t rsa -f {{ ssh_keygen_file }} -q -N ''"
+    shell: "ssh-keygen -b 2048 -t rsa -f {{ ssh_private_key }} -q -N ''"
     args:
-      creates: "{{ ssh_keygen_file }}"
+      creates: "{{ ssh_private_key }}"
     when: ssh_keygen_enable
 
   - name: user key - Verify user public key exists
     stat:
-      path: "{{ ssh_keygen_file }}"
+      path: "{{ ssh_private_key }}"
     register: key_results
 
   - name: user key - Fail when user keys do not exist
@@ -65,7 +68,7 @@
     when: not key_results.exists
 
   - name: user key - Copy the user SSH public key to all of the hosts
-    shell: "sshpass -p '{{ ansible_ssh_pass }}' ssh-copy-id {{ item }}"
+    shell: "sshpass -p '{{ ansible_ssh_pass }}' ssh-copy-id -i {{ ssh_public_key }} {{ item }}"
     with_items: "{{ ssh_known_hosts }}"
 
   # - name: Optionally disable SSH password authentication for tighter security
