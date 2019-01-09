@@ -24,7 +24,7 @@
       when: (( ssh_user is undefined ) or ( ssh_user is none ) or ( ssh_user | trim == ''))
 
     - name: "ssh_password"
-      prompt: "SSH password for user owning the public key?"
+      prompt: "SSH password for user connecting to hosts?"
       private: yes
       when: (( ssh_password is undefined ) or ( ssh_password is none ) or ( ssh_password | trim == ''))
 
